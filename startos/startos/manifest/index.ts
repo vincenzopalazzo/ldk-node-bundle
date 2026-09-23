@@ -26,7 +26,7 @@ export const manifest = setupManifest({
     },
     web: {
       source: {
-        dockerTag: 'ghcr.io/vincenzopalazzo/ldk-server-manager-web:0.1.0-rc.1',
+        dockerTag: 'ghcr.io/vincenzopalazzo/ldk-server-manager-web:0.1.0',
       },
       arch: ['x86_64', 'aarch64'],
     },
