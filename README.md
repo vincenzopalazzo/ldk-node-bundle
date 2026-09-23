@@ -59,6 +59,9 @@ To install: App Store → ⋯ → Community App Stores → add
 - Images are pinned by digest; the Lightning peer port is 9737 on the Umbrel.
 - The node talks to Bitcoin over RPC with the credentials Umbrel exports, and reaches `.onion`
   peers through Umbrel's Tor proxy.
+- The assistant answers the dashboard at `http://umbrel.local:2150`, at the Umbrel's IP address
+  and at its `.onion` address. Through a public or Tailscale hostname the gateway refuses the
+  browser's requests (403): it only trusts names DNS rebinding cannot aim at it.
 - Backups keep the seed and leave out the channel database (`backupIgnore`): restoring old
   channel state can lose funds. After a restore the node starts from the seed with no channels;
   peers close them and the funds return on-chain.
