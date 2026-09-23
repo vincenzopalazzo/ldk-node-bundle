@@ -53,8 +53,10 @@ reachable only through nginx.
 (`ldk/keys_mnemonic`), the API key and TLS files, the assistant's sign-ins (`goose/`) and the
 admin hash. Restoring an older channel database and starting the node can broadcast revoked
 states and lose those channels' funds, and StartOS backups are periodic, so a restored node
-starts from the seed with no channels: peers close them, and the funds come back on-chain to the
-seed's wallet. See the repository README for the same policy on Compose and umbrelOS.
+starts from the seed with no channel state. It keeps its on-chain wallet but cannot claim or
+defend the channels it had, so their balances may be lost: close channels before relying on a
+restore (moving boxes, replacing a disk). See the repository README for the same policy on
+Compose and umbrelOS.
 
 ## Not included yet
 

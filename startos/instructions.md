@@ -25,9 +25,12 @@ Your sign-ins stay on this server.
 
 StartOS backups keep the node's **seed**, not its **channel state**. Restoring an old copy of the
 channel state can lose the money in those channels, so it is left out on purpose. If you restore
-from a backup, the node comes back with its on-chain wallet but no channels; your peers close the
-old channels and that money returns to the on-chain wallet once the closes confirm (a peer that is
-offline can delay this by days).
+from a backup, the node comes back with its on-chain wallet but without its channels, and the
+money in those channels **may be lost**: the node no longer has what it needs to claim it.
+
+Before moving to another box or replacing a disk, close your channels (the funds return to the
+on-chain wallet, which the seed recovers). Treat a StartOS backup as protecting your on-chain
+funds, not your channel balances.
 
 ## Limitations
 
