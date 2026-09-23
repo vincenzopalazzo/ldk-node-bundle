@@ -63,5 +63,5 @@ To install: App Store → ⋯ → Community App Stores → add
   and at its `.onion` address. Through a public or Tailscale hostname the gateway refuses the
   browser's requests (403): it only trusts names DNS rebinding cannot aim at it.
 - Backups keep the seed and leave out the channel database (`backupIgnore`): restoring old
-  channel state can lose funds. After a restore the node starts from the seed with no channels;
-  peers close them and the funds return on-chain.
+  channel state can lose funds. A restored node keeps its seed and on-chain wallet but not its
+  channels, and the money in them may be lost: close channels before relying on a restore.

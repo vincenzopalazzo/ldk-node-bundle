@@ -16,8 +16,9 @@ description: >-
 
 
   IMPORTANT: the node creates its seed on first start. Umbrel backups include the seed but not
-  the channel database, because restoring old channel state can lose funds. Before relying on
-  this node for significant amounts, keep your own current backup of the channel state.
+  the channel database, because restoring old channel state can lose funds. A restored node
+  keeps its on-chain wallet but not its channels, and the money in them may be lost: close
+  channels before moving or restoring, and keep your own current backup of the channel state.
 releaseNotes: ""
 
 developer: Vincenzo Palazzo
