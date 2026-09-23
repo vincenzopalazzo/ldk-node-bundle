@@ -21,7 +21,7 @@ export const manifest = setupManifest({
       arch: ['x86_64', 'aarch64'],
     },
     'goose-gateway': {
-      source: { dockerTag: 'ghcr.io/vincenzopalazzo/goose-gateway:0.2.1' },
+      source: { dockerTag: 'ghcr.io/vincenzopalazzo/goose-gateway:0.2.2' },
       arch: ['x86_64', 'aarch64'],
     },
     web: {
