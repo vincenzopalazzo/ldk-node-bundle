@@ -1,0 +1,51 @@
+version: "3.7"
+
+services:
+  app_proxy:
+    environment:
+      APP_HOST: vincenzopalazzo-ldk-node_web_1
+      APP_PORT: 8080
+
+  ldk-server:
+    image: ghcr.io/vincenzopalazzo/ldk-server:0.1.1@sha256:c1609e8918b5b7dbf4514574b4842db34c4fae0de3b242b1175d043bd16193d2
+    user: "1000:1000"
+    command: ["/config/ldk-server.toml"]
+    restart: on-failure
+    # SIGTERM stops the node and persists channel state; don't cut it short.
+    stop_grace_period: 3m
+    environment:
+      LDK_SERVER_NODE_ALIAS: umbrel-ldk-node
+    volumes:
+      - ${APP_DATA_DIR}/data/ldk:/data
+      - ${APP_DATA_DIR}/ldk-server.toml:/config/ldk-server.toml:ro
+    ports:
+      - "${APP_VINCENZOPALAZZO_LDK_NODE_PEER_PORT}:9735"
+
+  grpc-web-bridge:
+    image: envoyproxy/envoy:distroless-v1.37.6@sha256:bf9f1b7b422677b6be5b68d2bdbdc6b972933755647efa387588a3c61c0edcf0
+    # Exits until ldk-server has created its TLS certificate on first start.
+    restart: on-failure
+    volumes:
+      - ${APP_DATA_DIR}/envoy.yaml:/etc/envoy/envoy.yaml:ro
+      - ${APP_DATA_DIR}/data/ldk:/ldk:ro
+
+  goose-gateway:
+    image: ghcr.io/vincenzopalazzo/goose-gateway:0.2.2@sha256:deec8cdba7a3bb58014264418d9d5bc03e6c3da924b88f0ae2c110da4e4a83e3
+    user: "1000:1000"
+    restart: on-failure
+    environment:
+      GOOSE_GATEWAY_ALLOWED_ORIGINS: http://${DEVICE_DOMAIN_NAME}:${APP_PROXY_PORT}
+    volumes:
+      - ${APP_DATA_DIR}/data/goose:/goose/config
+
+  web:
+    image: ghcr.io/vincenzopalazzo/ldk-server-manager-web:0.1.0@sha256:0d90740a509fb87c7fb7642435a29f5e5ca085c8f2ba223d2fdf1a3a3dc8192d
+    # Reads the node's 0400 api_key for /bundle.json, served behind Umbrel's login.
+    user: "1000:0"
+    restart: on-failure
+    environment:
+      BUNDLE_API_KEY: "true"
+      GRPC_WEB_UPSTREAM: vincenzopalazzo-ldk-node_grpc-web-bridge_1:8080
+      GOOSE_GATEWAY_UPSTREAM: vincenzopalazzo-ldk-node_goose-gateway_1:8791
+    volumes:
+      - ${APP_DATA_DIR}/data/ldk:/ldk:ro

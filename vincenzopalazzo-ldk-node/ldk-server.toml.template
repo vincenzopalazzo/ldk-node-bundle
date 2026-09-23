@@ -1,0 +1,17 @@
+# Rendered by Umbrel from ldk-server.toml.template on every start.
+
+[node]
+network = "${APP_VINCENZOPALAZZO_LDK_NODE_NETWORK}"
+
+[tls]
+# The name the gRPC-Web bridge dials; must be in the node's certificate.
+hosts = ["vincenzopalazzo-ldk-node_ldk-server_1"]
+
+[bitcoind]
+rpc_address = "${APP_BITCOIN_NODE_IP}:${APP_BITCOIN_RPC_PORT}"
+rpc_user = "${APP_BITCOIN_RPC_USER}"
+rpc_password = "${APP_BITCOIN_RPC_PASS}"
+
+[tor]
+# Outbound connections to .onion peers.
+proxy_address = "${TOR_PROXY_IP}:${TOR_PROXY_PORT}"

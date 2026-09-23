@@ -1,0 +1,6 @@
+# ldk-server names mainnet "bitcoin".
+export APP_VINCENZOPALAZZO_LDK_NODE_NETWORK="${APP_BITCOIN_NETWORK}"
+if [ "${APP_BITCOIN_NETWORK}" = "mainnet" ]; then
+	export APP_VINCENZOPALAZZO_LDK_NODE_NETWORK="bitcoin"
+fi
+export APP_VINCENZOPALAZZO_LDK_NODE_PEER_PORT="9737"

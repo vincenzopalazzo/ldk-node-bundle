@@ -1,0 +1,42 @@
+manifestVersion: 1
+id: vincenzopalazzo-ldk-node
+category: bitcoin
+name: LDK Node
+version: "0.1.0"
+tagline: A Lightning node built on LDK, with a dashboard and an AI assistant
+description: >-
+  LDK Node runs ldk-server, a Lightning node built on the Lightning Development Kit, connected
+  to the Bitcoin node on your Umbrel, with a web dashboard for payments, channels and liquidity.
+
+
+  The built-in assistant answers questions about your node and can prepare payments and channel
+  opens for your approval. It runs through goose and can use a subscription you already have
+  (xAI SuperGrok, ChatGPT, GitHub Copilot) or an API key; set it up from the assistant's
+  provider panel.
+
+
+  IMPORTANT: the node creates its seed on first start. Umbrel backups include the seed but not
+  the channel database, because restoring old channel state can lose funds. A restored node
+  keeps its on-chain wallet but not its channels, and the money in them may be lost: close
+  channels before moving or restoring, and keep your own current backup of the channel state.
+releaseNotes: ""
+
+developer: Vincenzo Palazzo
+website: https://github.com/vincenzopalazzo/ldk-node-bundle
+dependencies:
+  - bitcoin
+repo: https://github.com/vincenzopalazzo/ldk-node-bundle
+support: https://github.com/vincenzopalazzo/ldk-node-bundle/issues
+
+port: 2150
+gallery: []
+path: ""
+
+defaultUsername: ""
+defaultPassword: ""
+
+backupIgnore:
+  - data/ldk/*/ldk_node_data.sqlite
+
+submitter: Vincenzo Palazzo
+submission: https://github.com/vincenzopalazzo/ldk-node-bundle
