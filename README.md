@@ -41,8 +41,18 @@ Build natively for the machine's architecture; compiling Rust under QEMU emulati
 It speaks MCP over stdio (`docker run -i`) and needs `LDK_BASE_URL`, `LDK_API_KEY` (hex) and
 `LDK_TLS_CERT_PATH`.
 
+### ldk-node-assistant
+
+[`docker/assistant`](docker/assistant/Dockerfile): goose-gateway with ldk-server-mcp copied in,
+so the gateway serves the node's own tools to the dashboard's assistant
+(`GOOSE_GATEWAY_MCP_COMMAND`). ldk-server-mcp needs `LDK_BASE_URL` and the node's storage mounted
+read-only at `/goose/.ldk-server`, where it reads the API key and certificate itself; for a network
+other than mainnet, add `--config` with the node's own config file to the command. The gateway
+does no approval of its own, so serve it only behind a login.
+
 ## Releases
 
 Pushing a `v*` tag builds both images on a native amd64 and arm64 runner and publishes them to
-ghcr.io as one multi-arch image each, tagged with the version (`0.1.0`, `0.1`). Pull requests
+ghcr.io as one multi-arch image each, tagged with the version (`0.1.0`, `0.1`); then
+`ldk-node-assistant` is built from that release's ldk-server-mcp. Pull requests
 that touch `docker/` only build.
