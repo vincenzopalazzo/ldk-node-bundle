@@ -46,3 +46,8 @@ It speaks MCP over stdio (`docker run -i`) and needs `LDK_BASE_URL`, `LDK_API_KE
 Pushing a `v*` tag builds both images on a native amd64 and arm64 runner and publishes them to
 ghcr.io as one multi-arch image each, tagged with the version (`0.1.0`, `0.1`). Pull requests
 that touch `docker/` only build.
+
+## StartOS
+
+[`startos/`](startos) is a StartOS 0.4 package: ldk-server on the box's Bitcoin node, the dashboard
+behind its own login, and the assistant gateway. See [startos/README.md](startos/README.md).
