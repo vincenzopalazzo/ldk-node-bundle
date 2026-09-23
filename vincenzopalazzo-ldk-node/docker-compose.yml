@@ -39,7 +39,7 @@ services:
       - ${APP_DATA_DIR}/data/goose:/goose/config
 
   web:
-    image: ghcr.io/vincenzopalazzo/ldk-server-manager-web:0.1.0-rc.1@sha256:a48e5382e479e26479de5bf70e115b0fee0f6ce431e5e76335d5aa4b0305192e
+    image: ghcr.io/vincenzopalazzo/ldk-server-manager-web:0.1.0@sha256:0d90740a509fb87c7fb7642435a29f5e5ca085c8f2ba223d2fdf1a3a3dc8192d
     # Reads the node's 0400 api_key for /bundle.json, served behind Umbrel's login.
     user: "1000:0"
     restart: on-failure
