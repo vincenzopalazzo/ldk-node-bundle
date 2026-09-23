@@ -46,3 +46,19 @@ It speaks MCP over stdio (`docker run -i`) and needs `LDK_BASE_URL`, `LDK_API_KE
 Pushing a `v*` tag builds both images on a native amd64 and arm64 runner and publishes them to
 ghcr.io as one multi-arch image each, tagged with the version (`0.1.0`, `0.1`). Pull requests
 that touch `docker/` only build.
+
+## umbrelOS
+
+This repository is an Umbrel community app store (`umbrel-app-store.yml`) with one app,
+[`vincenzopalazzo-ldk-node`](vincenzopalazzo-ldk-node): ldk-server on the Umbrel's Bitcoin node,
+the dashboard behind Umbrel's login, and the assistant gateway.
+
+To install: App Store → ⋯ → Community App Stores → add
+`https://github.com/vincenzopalazzo/ldk-node-bundle`, then open **LDK Node**.
+
+- Images are pinned by digest; the Lightning peer port is 9737 on the Umbrel.
+- The node talks to Bitcoin over RPC with the credentials Umbrel exports, and reaches `.onion`
+  peers through Umbrel's Tor proxy.
+- Backups keep the seed and leave out the channel database (`backupIgnore`): restoring old
+  channel state can lose funds. After a restore the node starts from the seed with no channels;
+  peers close them and the funds return on-chain.
