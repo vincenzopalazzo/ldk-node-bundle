@@ -12,6 +12,7 @@ Small, single-program images for amd64 and arm64, running as a non-root user:
 | --------------------------------------------- | -------------------------------------- | ---------- |
 | `ghcr.io/vincenzopalazzo/ldk-server`          | the Lightning node                     | `docker/ldk-server`, upstream source at a pinned commit |
 | `ghcr.io/vincenzopalazzo/ldk-server-mcp`      | ldk-server's MCP server (stdio)        | `docker/ldk-server` |
+| `ghcr.io/vincenzopalazzo/vss-server`          | LDK's Versioned Storage Service (remote node state, on PostgreSQL) | `docker/vss-server`, upstream source at a pinned commit |
 | `ghcr.io/vincenzopalazzo/goose-gateway`       | OpenAI-compatible gateway in front of goose | [goose-gateway](https://github.com/vincenzopalazzo/goose-gateway) |
 | `ghcr.io/vincenzopalazzo/ldk-server-manager-web` | the dashboard and the stack's web entry point | the dashboard repository |
 
@@ -41,6 +42,21 @@ Build natively for the machine's architecture; compiling Rust under QEMU emulati
 It speaks MCP over stdio (`docker run -i`) and needs `LDK_BASE_URL`, `LDK_API_KEY` (hex) and
 `LDK_TLS_CERT_PATH`.
 
+### Running vss-server
+
+[vss-server](https://github.com/lightningdevkit/vss-server) stores a node's state remotely, with
+versions, in PostgreSQL: one static binary on an empty image (about 12 MB), configured by
+environment variables only.
+
+- `VSS_PSQL_ADDRESS`, `VSS_PSQL_USERNAME` and `VSS_PSQL_PASSWORD` point it at PostgreSQL; it
+  creates its database (`vss`) and applies its migrations itself. `VSS_PSQL_TLS=true` for TLS.
+- It listens on 8080 under `/vss`. Requests are authenticated by the client's signature, or by
+  JWT when `VSS_JWT_RSA_PEM` is set.
+- Logs go to stderr.
+
+ldk-server cannot store its state in VSS yet (its storage options are disk and PostgreSQL), so
+the stacks here do not run it; the image is published for when it can.
+
 ### ldk-node-assistant
 
 [`docker/assistant`](docker/assistant/Dockerfile): goose-gateway with ldk-server-mcp copied in,
@@ -52,21 +68,25 @@ does no approval of its own, so serve it only behind a login.
 
 ## Versions and releases
 
-**ldk-server and ldk-server-mcp carry the upstream version they run**, not this repository's. The
-upstream commit is `LDK_SERVER_REV` in [`docker/ldk-server/Dockerfile`](docker/ldk-server/Dockerfile),
-and [`upstream-version.sh`](docker/ldk-server/upstream-version.sh) turns it into the tag, matching
-what `ldk-server --version` prints:
+**ldk-server, ldk-server-mcp and vss-server carry the upstream version they run**, not this
+repository's. The upstream commit is `LDK_SERVER_REV` in
+[`docker/ldk-server/Dockerfile`](docker/ldk-server/Dockerfile) and `VSS_SERVER_REV` in
+[`docker/vss-server/Dockerfile`](docker/vss-server/Dockerfile), and
+[`upstream-version.sh`](docker/upstream-version.sh) turns it into the tag (for ldk-server, what
+`ldk-server --version` prints):
 
 | Upstream commit | Image tags | Example |
 | --- | --- | --- |
 | not a release (upstream has no tags yet) | crate version and short commit | `0.1.0-dbe22c5` |
 | an upstream release tag | the release, and its minor line | `0.2.0`, `0.2` |
+| an upstream pre-release tag | the pre-release only | vss-server `0.1.0-alpha.0` |
 
 Each image also records the full upstream commit in `org.opencontainers.image.revision`.
 
-Pushing a `v*` tag of this repository is a bundle release. It builds both images on a native
-amd64 and arm64 runner and publishes them as one multi-arch image each, unless that upstream
-version is already published: a version tag is never rebuilt, so one tag always means one build.
+Pushing a `v*` tag of this repository is a bundle release. It builds the ldk-server,
+ldk-server-mcp and vss-server images on a native amd64 and arm64 runner and publishes each as one
+multi-arch image, unless that upstream version is already published: a version tag is never
+rebuilt, so one tag always means one build.
 Then `ldk-node-assistant` is built from that ldk-server-mcp. The assistant is this repository's
 own product (a goose-gateway release plus an ldk-server-mcp version), so it carries the bundle
 version (`0.2.0`, `0.2`). Pull requests that touch `docker/` only build.

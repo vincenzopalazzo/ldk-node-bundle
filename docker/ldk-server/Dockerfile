@@ -15,7 +15,7 @@
 ARG RUST_IMAGE=rust:1.97-alpine3.22
 
 # Upstream commit to build. Bump deliberately: it is the node you run. It also names the
-# published images (upstream-version.sh): 0.1.0-dbe22c5, or the release version once upstream
+# published images (docker/upstream-version.sh): 0.1.0-dbe22c5, or the release version once upstream
 # tags this commit. Keep it a full 40-character hash.
 ARG LDK_SERVER_REV=dbe22c574bd2c7040d82f2c27e480968e15c8a1d
 

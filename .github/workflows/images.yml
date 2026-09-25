@@ -1,12 +1,14 @@
 name: Images
 
-# ldk-server and ldk-server-mcp, for amd64 and arm64, each built on a native runner (a Rust
-# build under QEMU emulation takes hours), then joined into one multi-arch image per name.
+# The upstream images, for amd64 and arm64, each built on a native runner (a Rust build under
+# QEMU emulation takes hours), then joined into one multi-arch image per name:
+#   - ldk-server and ldk-server-mcp, from lightningdevkit/ldk-server (docker/ldk-server);
+#   - vss-server, from lightningdevkit/vss-server (docker/vss-server).
 #
-# They are published under the upstream version they run, not this repository's: the commit in
-# docker/ldk-server/Dockerfile decides it (see docker/ldk-server/upstream-version.sh), e.g.
-# 0.1.0-dbe22c5, or 0.2.0 plus 0.2 once that commit is an upstream release. A version tag is
-# never rebuilt: a bundle release that keeps the same commit reuses the published images.
+# Each is published under the upstream version it runs, not this repository's: the commit in its
+# Dockerfile decides it (docker/upstream-version.sh), e.g. ldk-server 0.1.0-dbe22c5, or 0.2.0
+# plus 0.2 once that commit is an upstream release. A version tag is never rebuilt: a bundle
+# release that keeps a commit reuses that component's published images.
 #
 # Pushes to ghcr.io only for a v* tag of this repository; pull requests and manual runs just
 # prove it builds.
@@ -29,44 +31,65 @@ jobs:
   upstream:
     runs-on: ubuntu-24.04
     outputs:
-      revision: ${{ steps.version.outputs.revision }}
-      version: ${{ steps.version.outputs.version }}
-      release: ${{ steps.version.outputs.release }}
-      # Build and push new images: a release tag of this repository whose upstream version is
-      # not published yet.
-      publish: ${{ steps.publish.outputs.publish }}
+      ldk_revision: ${{ steps.ldk.outputs.revision }}
+      ldk_version: ${{ steps.ldk.outputs.version }}
+      ldk_release: ${{ steps.ldk.outputs.release }}
+      ldk_publish: ${{ steps.publish.outputs.ldk }}
+      vss_revision: ${{ steps.vss.outputs.revision }}
+      vss_version: ${{ steps.vss.outputs.version }}
+      vss_release: ${{ steps.vss.outputs.release }}
+      vss_publish: ${{ steps.publish.outputs.vss }}
     steps:
       - uses: actions/checkout@v4
-      - id: version
-        run: docker/ldk-server/upstream-version.sh | tee -a "$GITHUB_OUTPUT"
+      - id: ldk
+        run: docker/upstream-version.sh ldk-server | tee -a "$GITHUB_OUTPUT"
+      - id: vss
+        run: docker/upstream-version.sh vss-server | tee -a "$GITHUB_OUTPUT"
+      # Publish a component on a release tag of this repository, unless its upstream version is
+      # already out.
       - id: publish
+        env:
+          TAGGED: ${{ startsWith(github.ref, 'refs/tags/v') }}
         run: |
-          publish=false
-          if [ "${{ startsWith(github.ref, 'refs/tags/v') }}" = true ]; then
-            publish=true
-            for image in ldk-server ldk-server-mcp; do
-              if docker buildx imagetools inspect "$REGISTRY/$image:${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
-                echo "$image:${{ steps.version.outputs.version }} is already published; not rebuilding it"
-                publish=false
+          missing() {
+            for image in "$@"; do
+              if docker buildx imagetools inspect "$REGISTRY/$image" >/dev/null 2>&1; then
+                echo "$image is already published; not rebuilding it" >&2
+                return 1
               fi
             done
+          }
+          ldk=false; vss=false
+          if [ "$TAGGED" = true ]; then
+            missing "ldk-server:${{ steps.ldk.outputs.version }}" "ldk-server-mcp:${{ steps.ldk.outputs.version }}" && ldk=true
+            missing "vss-server:${{ steps.vss.outputs.version }}" && vss=true
           fi
-          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+          echo "ldk=$ldk" >> "$GITHUB_OUTPUT"
+          echo "vss=$vss" >> "$GITHUB_OUTPUT"
 
   build:
     needs: upstream
-    # On a release tag whose images already exist there is nothing to build.
-    if: needs.upstream.outputs.publish == 'true' || !startsWith(github.ref, 'refs/tags/v')
     strategy:
       matrix:
-        image: [ldk-server, ldk-server-mcp]
-        arch: [amd64, arm64]
+        include:
+          - { image: ldk-server, component: ldk, arch: amd64, context: docker/ldk-server, arg: LDK_SERVER_REV, repo: lightningdevkit/ldk-server }
+          - { image: ldk-server, component: ldk, arch: arm64, context: docker/ldk-server, arg: LDK_SERVER_REV, repo: lightningdevkit/ldk-server }
+          - { image: ldk-server-mcp, component: ldk, arch: amd64, context: docker/ldk-server, arg: LDK_SERVER_REV, repo: lightningdevkit/ldk-server }
+          - { image: ldk-server-mcp, component: ldk, arch: arm64, context: docker/ldk-server, arg: LDK_SERVER_REV, repo: lightningdevkit/ldk-server }
+          - { image: vss-server, component: vss, arch: amd64, context: docker/vss-server, arg: VSS_SERVER_REV, repo: lightningdevkit/vss-server }
+          - { image: vss-server, component: vss, arch: arm64, context: docker/vss-server, arg: VSS_SERVER_REV, repo: lightningdevkit/vss-server }
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-24.04' }}
     env:
-      PUBLISH: ${{ needs.upstream.outputs.publish }}
+      PUBLISH: ${{ needs.upstream.outputs[format('{0}_publish', matrix.component)] }}
+      REVISION: ${{ needs.upstream.outputs[format('{0}_revision', matrix.component)] }}
+      VERSION: ${{ needs.upstream.outputs[format('{0}_version', matrix.component)] }}
+      # On a release tag, a component whose images already exist has nothing to build.
+      SKIP: ${{ startsWith(github.ref, 'refs/tags/v') && needs.upstream.outputs[format('{0}_publish', matrix.component)] != 'true' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
+      - if: env.SKIP != 'true'
+        uses: actions/checkout@v4
+      - if: env.SKIP != 'true'
+        uses: docker/setup-buildx-action@v3
       - if: env.PUBLISH == 'true'
         uses: docker/login-action@v3
         with:
@@ -74,21 +97,22 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - id: build
+        if: env.SKIP != 'true'
         uses: docker/build-push-action@v6
         with:
-          context: docker/ldk-server
+          context: ${{ matrix.context }}
           target: ${{ matrix.image }}
           platforms: linux/${{ matrix.arch }}
-          build-args: LDK_SERVER_REV=${{ needs.upstream.outputs.revision }}
+          build-args: ${{ matrix.arg }}=${{ env.REVISION }}
           # source names this repository so the ghcr.io package stays linked to it; version and
           # revision are upstream's, the code the image runs.
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.licenses=MIT OR Apache-2.0
-            org.opencontainers.image.version=${{ needs.upstream.outputs.version }}
-            org.opencontainers.image.revision=${{ needs.upstream.outputs.revision }}
-            org.opencontainers.image.url=https://github.com/lightningdevkit/ldk-server/tree/${{ needs.upstream.outputs.revision }}
-            org.opencontainers.image.description=${{ matrix.image }} ${{ needs.upstream.outputs.version }} (lightningdevkit/ldk-server@${{ needs.upstream.outputs.revision }})
+            org.opencontainers.image.version=${{ env.VERSION }}
+            org.opencontainers.image.revision=${{ env.REVISION }}
+            org.opencontainers.image.url=https://github.com/${{ matrix.repo }}/tree/${{ env.REVISION }}
+            org.opencontainers.image.description=${{ matrix.image }} ${{ env.VERSION }} (${{ matrix.repo }}@${{ env.REVISION }})
           outputs: type=image,name=${{ env.REGISTRY }}/${{ matrix.image }},push-by-digest=true,name-canonical=true,push=${{ env.PUBLISH }}
           cache-from: type=gha,scope=${{ matrix.image }}-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}-${{ matrix.arch }}
@@ -106,34 +130,47 @@ jobs:
 
   publish:
     needs: [upstream, build]
-    if: needs.upstream.outputs.publish == 'true'
+    if: needs.upstream.outputs.ldk_publish == 'true' || needs.upstream.outputs.vss_publish == 'true'
     strategy:
       fail-fast: false
       matrix:
-        image: [ldk-server, ldk-server-mcp]
+        include:
+          - { image: ldk-server, component: ldk }
+          - { image: ldk-server-mcp, component: ldk }
+          - { image: vss-server, component: vss }
     runs-on: ubuntu-24.04
+    env:
+      PUBLISH: ${{ needs.upstream.outputs[format('{0}_publish', matrix.component)] }}
     steps:
-      - uses: actions/download-artifact@v4
+      - if: env.PUBLISH == 'true'
+        uses: actions/download-artifact@v4
         with:
           path: ${{ runner.temp }}/digests
           # Image last: digest-*-ldk-server must not also match digest-*-ldk-server-mcp.
           pattern: digest-*-${{ matrix.image }}
           merge-multiple: true
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+      - if: env.PUBLISH == 'true'
+        uses: docker/setup-buildx-action@v3
+      - if: env.PUBLISH == 'true'
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - working-directory: ${{ runner.temp }}/digests
+      - if: env.PUBLISH == 'true'
+        working-directory: ${{ runner.temp }}/digests
         env:
           IMAGE: ${{ env.REGISTRY }}/${{ matrix.image }}
-          VERSION: ${{ needs.upstream.outputs.version }}
-          RELEASE: ${{ needs.upstream.outputs.release }}
+          VERSION: ${{ needs.upstream.outputs[format('{0}_version', matrix.component)] }}
+          RELEASE: ${{ needs.upstream.outputs[format('{0}_release', matrix.component)] }}
         run: |
-          # The upstream version, always; for an upstream release also its minor line (0.2).
+          # The upstream version, always; for a final upstream release also its minor line (0.2).
+          # A pre-release (0.1.0-alpha.0) gets no minor line.
           set -- -t "$IMAGE:$VERSION"
-          if [ "$RELEASE" = true ]; then set -- "$@" -t "$IMAGE:${VERSION%.*}"; fi
+          case "$RELEASE:$VERSION" in
+            true:*-*) ;;
+            true:*) set -- "$@" -t "$IMAGE:${VERSION%.*}" ;;
+          esac
           for digest in *; do set -- "$@" "$IMAGE@sha256:$digest"; done
           docker buildx imagetools create "$@"
           docker buildx imagetools inspect "$IMAGE:$VERSION"
@@ -141,7 +178,7 @@ jobs:
   assistant:
     # goose-gateway with the release's ldk-server-mcp copied in (docker/assistant). No RUN step,
     # so one multi-platform build on one runner needs no emulation. It is this repository's
-    # product (a gateway release plus an ldk-server-mcp version), so it carries this
+    # product (a goose-gateway release plus an ldk-server-mcp version), so it carries this
     # repository's version.
     needs: [upstream, publish]
     if: >-
@@ -167,11 +204,11 @@ jobs:
         with:
           context: docker/assistant
           platforms: linux/amd64,linux/arm64
-          build-args: LDK_SERVER_MCP_IMAGE=${{ env.REGISTRY }}/ldk-server-mcp:${{ needs.upstream.outputs.version }}
+          build-args: LDK_SERVER_MCP_IMAGE=${{ env.REGISTRY }}/ldk-server-mcp:${{ needs.upstream.outputs.ldk_version }}
           labels: |
             ${{ steps.meta.outputs.labels }}
             org.opencontainers.image.licenses=MIT
-            io.github.vincenzopalazzo.ldk-server-mcp.version=${{ needs.upstream.outputs.version }}
+            io.github.vincenzopalazzo.ldk-server-mcp.version=${{ needs.upstream.outputs.ldk_version }}
           tags: ${{ steps.meta.outputs.tags }}
           push: true
       - run: docker buildx imagetools inspect ${{ env.REGISTRY }}/ldk-node-assistant:${{ steps.meta.outputs.version }}
