@@ -13,7 +13,7 @@ export const manifest = setupManifest({
   volumes: ['main'],
   images: {
     'ldk-server': {
-      source: { dockerTag: 'ghcr.io/vincenzopalazzo/ldk-server:0.1.1' },
+      source: { dockerTag: 'ghcr.io/vincenzopalazzo/ldk-server:0.1.0-dbe22c5' },
       arch: ['x86_64', 'aarch64'],
     },
     envoy: {
