@@ -50,9 +50,41 @@ read-only at `/goose/.ldk-server`, where it reads the API key and certificate it
 other than mainnet, add `--config` with the node's own config file to the command. The gateway
 does no approval of its own, so serve it only behind a login.
 
-## Releases
+## Versions and releases
 
-Pushing a `v*` tag builds both images on a native amd64 and arm64 runner and publishes them to
-ghcr.io as one multi-arch image each, tagged with the version (`0.1.0`, `0.1`); then
-`ldk-node-assistant` is built from that release's ldk-server-mcp. Pull requests
-that touch `docker/` only build.
+**ldk-server and ldk-server-mcp carry the upstream version they run**, not this repository's. The
+upstream commit is `LDK_SERVER_REV` in [`docker/ldk-server/Dockerfile`](docker/ldk-server/Dockerfile),
+and [`upstream-version.sh`](docker/ldk-server/upstream-version.sh) turns it into the tag, matching
+what `ldk-server --version` prints:
+
+| Upstream commit | Image tags | Example |
+| --- | --- | --- |
+| not a release (upstream has no tags yet) | crate version and short commit | `0.1.0-dbe22c5` |
+| an upstream release tag | the release, and its minor line | `0.2.0`, `0.2` |
+
+Each image also records the full upstream commit in `org.opencontainers.image.revision`.
+
+Pushing a `v*` tag of this repository is a bundle release. It builds both images on a native
+amd64 and arm64 runner and publishes them as one multi-arch image each, unless that upstream
+version is already published: a version tag is never rebuilt, so one tag always means one build.
+Then `ldk-node-assistant` is built from that ldk-server-mcp. The assistant is this repository's
+own product (a goose-gateway release plus an ldk-server-mcp version), so it carries the bundle
+version (`0.2.0`, `0.2`). Pull requests that touch `docker/` only build.
+
+To move to a newer ldk-server, bump `LDK_SERVER_REV`, then tag a bundle release. Earlier tags
+named after bundle releases (`ldk-server:0.1.1`, `0.2.0`) stay published, but they are both the
+`dbe22c5` build: use `0.1.0-dbe22c5`.
+
+### Long-term support
+
+There is no LTS line yet, because upstream publishes no releases: every image is a snapshot of
+a commit. Once ldk-server tags releases, the plan is:
+
+- `main` keeps following upstream, pinned to a commit or to the newest release;
+- an `lts/<major>.<minor>` branch pins one upstream release line and takes only its patch
+  releases and security fixes. Its images are tagged with the release, its minor line and
+  `lts`, and the Compose, umbrelOS and StartOS packages point at them;
+- a release line leaves LTS when the next one has been LTS for a while; the dates will be
+  announced in the release notes.
+
+Tracked in the issues of this repository.

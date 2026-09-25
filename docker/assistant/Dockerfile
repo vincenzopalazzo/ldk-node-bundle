@@ -20,7 +20,7 @@
 
 # goose-gateway 0.3.0 is the first release that serves MCP tools.
 ARG GOOSE_GATEWAY_IMAGE=ghcr.io/vincenzopalazzo/goose-gateway:0.3.0
-ARG LDK_SERVER_MCP_IMAGE=ghcr.io/vincenzopalazzo/ldk-server-mcp:0.1.1
+ARG LDK_SERVER_MCP_IMAGE=ghcr.io/vincenzopalazzo/ldk-server-mcp:0.1.0-dbe22c5
 
 FROM ${LDK_SERVER_MCP_IMAGE} AS mcp
 
