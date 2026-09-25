@@ -7,7 +7,7 @@ services:
       APP_PORT: 8080
 
   ldk-server:
-    image: ghcr.io/vincenzopalazzo/ldk-server:0.1.1@sha256:c1609e8918b5b7dbf4514574b4842db34c4fae0de3b242b1175d043bd16193d2
+    image: ghcr.io/vincenzopalazzo/ldk-server:0.1.0-dbe22c5@sha256:980a36c29d0ac529044ea3d30b2f336130afed2e5ad815de90bed9f275e9ffb2
     user: "1000:1000"
     command: ["/config/ldk-server.toml"]
     restart: on-failure
